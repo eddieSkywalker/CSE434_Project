@@ -1,7 +1,7 @@
 //
 //  client.c
 //
-//  Created by Eddie Schweitzer on 9/6/16.
+//  Created by Eddie Schweitzer & Chris Ward on 9/6/16.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
     int sockfd, portno, n;
     int clientNumber;
     int i = 0;
+    char buffer[256];
     
     //serv_addr will contain the address of the server
     struct sockaddr_in serv_addr;
@@ -55,8 +56,6 @@ int main(int argc, char *argv[])
     
     struct hostent *server;
     
-    char buffer[256];
-    
     //atoi() function can be used to convert port number from a string of digits to an integer, if your input is in the form of a string.
     //    portno = 8888;
     
@@ -67,7 +66,7 @@ int main(int argc, char *argv[])
         portno = atoi(argv[3]);
     }
     else
-        error("Error in Command Line Input.\n");
+        error("Error in Command Line Input(incorrect # of arguments).\n");
     
     // Step 1: create socket
     //it take three arguments - address domain, type of socket, protocol (zero allows the OS to choose thye appropriate protocols based on type of socket)
@@ -106,53 +105,51 @@ int main(int argc, char *argv[])
     //connect function is called by the client to establish a connection to the server. It takes three arguments, the socket file descriptor, the address of the host to which it wants to connect (including the port number), and the size of this address
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
         error("ERROR connecting");
-    
-    //After a connection and the client has successfully connected to the server
-    //initialize the buffer using the bzero() function
-    bzero(buffer,256);
-    
-/* Step 2.5: Attempt to establish connection with client ID */
-    
-    /* Edit Send Client Number to Server */
-//    int *intBuffer = &clientNumber;
-//    
-//    n = write(sockfd, intBuffer, sizeof(int));
-    buffer = clientNumber;
-    n = write(sockfd,buffer,strlen(buffer));
+        
+        //After a connection and the client has successfully connected to the server
+        //initialize the buffer using the bzero() function
+        bzero(buffer,256);
+        
+        /* Step 2.5: Attempt to establish connection with client ID */
+        write(sockfd, &clientNumber, sizeof(int));
 
-    if (n < 0)
-        error("ERROR writing to socket");
-    /* Edit End */
+        read(sockfd, buffer, 255);
     
-    n = read(sockfd, buffer, 255);
-    if (n < 0)
-        error("ERROR reading from socket");
-    printf("%s\n",buffer);
+        printf("%s\n",buffer);
+        /* End Step 2.5 */
     
-/* End Step 2.5 */
-    
-    printf("Please enter the message: ");
-    
-    //set the buffer to the message entered on console at client end for a maximum of 255 characters
-    fgets(buffer,255,stdin);
-    
-    // Step 3: Send and Receive data using Read/Write system calls.
-    //write from the buffer into the socket
-    n = write(sockfd,buffer,strlen(buffer));
-    
-    //check if the write function was successful or not
-    if (n < 0)
-        error("ERROR writing to socket");
-    
-    //both the server can read and write after a connection has been established.
-    //everything written by the client will be read by the server, and everything written by the server will be read by the client.
-    bzero(buffer,256);
-    
-    n = read(sockfd,buffer,255);
-    if (n < 0)
-        error("ERROR reading from socket");
-    printf("%s\n",buffer);
-    
+    while(1)
+    {
+        printf("Please enter the message: \n");
+        
+        //set the buffer to the message entered on console at client end for a maximum of 255 characters
+        fgets(buffer,255,stdin);
+        
+        // Step 3: Send and Receive data using Read/Write system calls.
+        //write from the buffer into the socket
+        n = write(sockfd,buffer,strlen(buffer));
+        
+        //check if the write function was successful or not
+        if (n < 0)
+            error("ERROR writing to socket");
+        
+        //both the server can read and write after a connection has been established.
+        //everything written by the client will be read by the server, and everything written by the server will be read by the client.
+        bzero(buffer,256);
+        
+        n = read(sockfd,buffer,255);
+        if (n < 0)
+            error("ERROR reading from socket");
+        printf("\n%s\n",buffer);
+        
+        printf("Press enter to continue or N to exit.\n");
+        char response;
+        response = (char)getc(stdin);
+
+        if(response == 'n' || response == 'N')
+            exit(0);
+
+    } // End of while loop
     
     //close connections using file descriptors
     close(sockfd);
