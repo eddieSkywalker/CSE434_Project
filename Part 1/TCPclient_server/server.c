@@ -1,8 +1,29 @@
 //
 //  server.c
 //
-//
 //  Created by Eddie Schweitzer & Chris Ward on 9/6/16.
+/*
+1) The advantage to a concurrent, connection oriented system is that the server can handle multiple 
+connections at once, whereas an iterative server would have to only have one connection at a time. 
+This is obviously an advantage because in real life, it is very likely that many people
+will want to connect to the same server at the same time.
+ 
+The disadvantage is the zombie problem, where once someone has connected and disconnected 
+they leave behind a ghost in the process kernel that contains information about the process that had occured.
+This is what a zombie is, when a process has been terminated but is not allowed to completely
+die because at some point the server might want information related to the death of that process.
+Over time, with many connections, these zombies can slow down the system during operations by the server,
+as they clog up the process table in the kernel. This is also true over any architecture, so the problem
+is persistent. 
+
+2) In general, whenever a server will be needed by many users at the same time, you do not want to use an iterative server
+so a concurrent server is a good idea. Furthermore, the appropriate time to use a concurrent, connection oriented server 
+process is when the server will be doing a lot of reading and writing over a long period of time, and when you need a 
+connection to be reliable. For example, FTP and Telnet often send and receive data to and from servers over much time,
+so in these casesa a concurrent, connection oriented server used. However, the concurrent, connection oriented model
+has a very high overhead because of the nature of how forking works, creating many different connections inside of a server,
+so this process should not when the average processing time of requests is small compared to the overhead caused by the threads. 
+*/
 
 //header files
 
