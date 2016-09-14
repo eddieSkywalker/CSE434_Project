@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     else
         error("Error in Command Line Input(incorrect # of arguments).\n");
     
-    // Step 1: create socket
+// Step 1: create socket
     //it take three arguments - address domain, type of socket, protocol (zero allows the OS to choose thye appropriate protocols based on type of socket)
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     //contain the port number
     serv_addr.sin_port = htons(portno);
     
-    // Step 2: Connect socket to address of server / (Step 4 on Server)
+// Step 2: Connect socket to address of server / (Step 4 on Server)
     //connect function is called by the client to establish a connection to the server. It takes three arguments, the socket file descriptor, the address of the host to which it wants to connect (including the port number), and the size of this address
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
         error("ERROR connecting");
@@ -110,13 +110,17 @@ int main(int argc, char *argv[])
         //initialize the buffer using the bzero() function
         bzero(buffer,256);
         
-        /* Step 2.5: Attempt to establish connection with client ID */
+/* Step 2.5: Attempt to establish connection with client ID */
         write(sockfd, &clientNumber, sizeof(int));
 
-        read(sockfd, buffer, 255);
+        if(read(sockfd, buffer, 255) == 0)
+        {
+            printf("..Connection error..Client already connected.\n");
+            exit(1);
+        }
     
         printf("%s\n",buffer);
-        /* End Step 2.5 */
+/* End Step 2.5 */
     
     while(1)
     {
@@ -125,7 +129,7 @@ int main(int argc, char *argv[])
         //set the buffer to the message entered on console at client end for a maximum of 255 characters
         fgets(buffer,255,stdin);
         
-        // Step 3: Send and Receive data using Read/Write system calls.
+// Step 3: Send and Receive data using Read/Write system calls.
         //write from the buffer into the socket
         n = write(sockfd,buffer,strlen(buffer));
         

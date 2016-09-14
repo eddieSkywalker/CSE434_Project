@@ -58,7 +58,7 @@ void processSocket(int newsockfd)
     {
         
         printf("Client Connection Closed.\n");
-        exit(1);
+        exit(0);
     }
 
     //both the server/client can read and write after a connection has been established.
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     //serv_addr will contain the address of the server, and cli_addr will contain the address of the client which connects to the server.
     struct sockaddr_in serv_addr, cli_addr;
     
-    //Step 1: create socket
+//Step 1: create socket
     //it take three arguments - address domain, type of socket, protocol (zero allows the OS to choose thye appropriate protocols based on type of socket)
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
@@ -119,13 +119,13 @@ int main(int argc, char *argv[])
     //contain the port number
     serv_addr.sin_port = htons(portno);
     
-    // Step 2: Bind socket
+// Step 2: Bind socket
     //bind() system call binds a socket to an address, in this case the address of the current host and port number on which the server will run.
     //three arguments, the socket file descriptor, the address to which is bound, and the size of the address to which it is bound.
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
         error("ERROR on binding");
     
-    // Step 3: Listen for connections
+// Step 3: Listen for connections
     //listen system call allows the process to listen on the socket for connections.
     //The first argument is the socket file descriptor, and second is number of connections that can be waiting while the process is handling a particular connection.
     listen(sockfd,5);
@@ -186,7 +186,8 @@ int main(int argc, char *argv[])
         else if (duplicateUser == true)
         {
             // client already registered, deny request to server.
-            n = write(newsockfd,"\n..Connection error..Client already connected.\n",200);
+//            n = write(newsockfd,"\n..Connection error..Client already connected.\n",200);
+            write(newsockfd, 0, sizeof(int));
             if (n < 0) error("ERROR writing to socket Dupe user False");
             close(newsockfd);
         }
