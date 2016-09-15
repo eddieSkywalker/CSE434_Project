@@ -2,7 +2,12 @@
 //  server.c
 //
 //  Created by Eddie Schweitzer & Chris Ward on 9/6/16.
+//  Course CSE434, Computer Networks
+//  Semester: Fall 2016
+//  Project Part: 1
+//  Time Spent: 30+ hours
 /*
+ 
 1) The advantage to a concurrent, connection oriented system is that the server can handle multiple 
 connections at once, whereas an iterative server would have to only have one connection at a time. 
 This is obviously an advantage because in real life, it is very likely that many people
@@ -68,13 +73,10 @@ void processSocket(int newsockfd)
     //After a connection and a client has successfully connected to the server
     //initialize the buffer using the bzero() function
 //    bzero(buffer,256);
-
-//    n = read(newsockfd,&submittedClientID,sizeof(int));
     
     //reads from the socket into a buffer for a maximum of 255 characters
     //read call uses new file descriptor, the one returned by accept()
     n = read(newsockfd,buffer,255);
-//    if (n < 0) error("Error reading from socket, potential duplicate user attemping to connect");
     if (n == 0)
     {
         
@@ -165,8 +167,8 @@ int main(int argc, char *argv[])
         
         n = read(newsockfd,&submittedClientID,sizeof(int));
         if (n < 0) error("ERROR reading from socket");
-            
-        for(int i = 0; i < 5; i++)
+        int i;
+        for(i = 0; i < 5; i++)
         {
             if(clientNumberArray[i] == submittedClientID)
             {
@@ -207,28 +209,12 @@ int main(int argc, char *argv[])
         else if (duplicateUser == true)
         {
             // client already registered, deny request to server.
-//            n = write(newsockfd,"\n..Connection error..Client already connected.\n",200);
             write(newsockfd, 0, sizeof(int));
             if (n < 0) error("ERROR writing to socket Dupe user False");
             close(newsockfd);
         }
         /* End Check */
         
-//        // create child process
-//        pid = fork();
-//        
-//        if (pid < 0)
-//            error("ERROR on fork");
-//        else if (pid == 0)
-//        {
-//            /* This is the client process */
-//            close(sockfd);
-//            while(1)
-//            processSocket(newsockfd);
-//            exit(0);
-//        }
-//        else
-//            close(newsockfd);
     } /* end while loop */
     
     //close connections using file descriptors
