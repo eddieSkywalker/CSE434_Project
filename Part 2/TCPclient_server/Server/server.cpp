@@ -101,8 +101,6 @@ void processSocket(int newsockfd)
     string mode = strtok(NULL, "");
 	char * sToPass = new char[(filename.length() + 1)];
 	strcpy(sToPass, filename.c_str());
-//    cout << filename << endl;
-//    cout << mode << endl;
     
     string str2 = " r";
     if(mode.find(str2) != string::npos)

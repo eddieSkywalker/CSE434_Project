@@ -145,8 +145,8 @@ int main(int argc, char *argv[])
         string filename = strtok(buffer, ",");//filename
         string mode = strtok(NULL,"");
         string command = filename + "," + mode; //concatenate user input to send to server
-	char * sToPass = new char[(filename.length() + 1)];
-	strcpy(sToPass, filename.c_str());
+        char * sToPass = new char[(filename.length() + 1)];
+        strcpy(sToPass, filename.c_str());
         
         string str2 = " r";
         if(mode.find(str2) != string::npos)
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
                 
                 if(strncmp(buffer, "File not found.\n", 17) == 0)
                 {
-//                    cout << buffer << endl;
+                    cout << buffer << endl;
                     finished = true;
                 }
                 else //server found file and has begun sending content
