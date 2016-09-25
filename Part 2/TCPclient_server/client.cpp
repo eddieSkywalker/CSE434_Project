@@ -145,6 +145,8 @@ int main(int argc, char *argv[])
         string filename = strtok(buffer, ",");//filename
         string mode = strtok(NULL,"");
         string command = filename + "," + mode; //concatenate user input to send to server
+	char * sToPass = new char[(filename.length() + 1)];
+	strcpy(sToPass, filename.c_str());
         
         string str2 = " r";
         if(mode.find(str2) != string::npos)
@@ -194,13 +196,13 @@ int main(int argc, char *argv[])
                 {
                     if(initMakeFile == false)
                     {
-                        fileWriter.open("readthis.txt"); //open a file 'filename' for processing
+                        fileWriter.open(sToPass); //open a file 'filename' for processing
                         initMakeFile = true;
                     }
                     if(fileWriter.is_open())
                     {
                         printf("writing to file\n");
-                        fileWriter << "it does work.\n"; //writes to local file that is "open"
+                        fileWriter << buffer; //writes to local file that is "open"
                     }
                 }
             }
@@ -221,7 +223,7 @@ int main(int argc, char *argv[])
             else exit(1); //if server not rdy to write. Unexpected error, abort.
             
             string line;
-            fileReader.open(filename);
+            fileReader.open(sToPass);
             
             while(getline(fileReader, line)) //write line by line to server
             {

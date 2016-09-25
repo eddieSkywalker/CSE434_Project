@@ -99,6 +99,8 @@ void processSocket(int newsockfd)
     
     string filename = strtok(buffer, ","); //split arguments from client (read/write)
     string mode = strtok(NULL, "");
+	char * sToPass = new char[(filename.length() + 1)];
+	strcpy(sToPass, filename.c_str());
 //    cout << filename << endl;
 //    cout << mode << endl;
     
@@ -120,14 +122,14 @@ void processSocket(int newsockfd)
         printf("Client requesting read.\n");
         
         //setup parameters for opening file
-        ifstream fileReader ("readthis.txt"); //Stream class to read from file
+        ifstream fileReader (sToPass); //Stream class to read from file
         string line;
 //        fileReader(filename);
         
         if(fileReader.is_open() == true) //check that file successfully opened
         {
             //sends line by line to client until finished
-            while(getline(fileReader, line) != 0)
+   	 while(getline(fileReader, line) != 0)
             {
                 write(newsockfd, &line, sizeof(line));
                 if (n < 0) error("ERROR writing to socket");
@@ -158,7 +160,7 @@ void processSocket(int newsockfd)
         //setup parameters for writing to file
         ofstream fileWriter; //Stream class to write on files
         string line;
-        fileWriter.open(filename);
+        fileWriter.open(sToPass);
         
         //Server must WRITE one more time before writing data!
         write(newsockfd,"Beginning writing.\n", strlen("Beginning writing.\n"));
