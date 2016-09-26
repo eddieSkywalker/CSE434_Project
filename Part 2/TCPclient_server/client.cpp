@@ -218,8 +218,6 @@ int main(int argc, char *argv[])
         }
         else if(writeRequest == true) //if user wants to write(transfer) to server
         {
-            ifstream fileReader; //Stream class to read from files
-            
             //Client must READ one more time before writing data to server!
             n = read(sockfd,buffer,255);
             
@@ -229,15 +227,21 @@ int main(int argc, char *argv[])
             }
             else exit(1); //if server not rdy to write. Unexpected error, abort.
             
+            //setup parameters for writing to file
+            ifstream fileReader; //Stream class to read from files
             string line;
             fileReader.open(sToPass);
             
             while(getline(fileReader, line)) //write line by line to server
             {
-                write(sockfd,"Writing to server..\n", strlen("Writing to server..\n"));
+                char * lineArray = new char[(line.length() + 1)];
+                strcpy(lineArray, line.c_str());
+                
+                write(sockfd, lineArray, strlen(lineArray));
                 if (n < 0) error("ERROR writing to socket");
             }
             
+            fileReader.close();
         }
         
         bzero(buffer,256);
