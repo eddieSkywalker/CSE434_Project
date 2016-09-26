@@ -176,8 +176,6 @@ int main(int argc, char *argv[])
         n = write(sockfd, commandToPass, strlen(commandToPass)); //send 2 arguments to server to request either r/w of/to a file.
         if (n < 0) error("ERROR writing to socket");
         
-        bzero(buffer,256);
-        
         if(readRequest == true) //if user wants to read from server
         {
             ofstream fileWriter; //Stream class to write on files
@@ -218,27 +216,22 @@ int main(int argc, char *argv[])
         }
         else if(writeRequest == true) //if user wants to write(transfer) to server
         {
-            //Client must READ one more time before writing data to server!
-            n = read(sockfd,buffer,255);
-            
-            if(strncmp(buffer, "Begin writing.\n", 16) == 0)
-            {
-                printf("Beginning file writing.\n");
-            }
-            else exit(1); //if server not rdy to write. Unexpected error, abort.
-            
             //setup parameters for writing to file
             ifstream fileReader; //Stream class to read from files
             string line;
             fileReader.open(sToPass);
             
-            while(getline(fileReader, line)) //write line by line to server
+            
+            while(getline(fileReader, line) == true) //write line by line to server
             {
-                char * lineArray = new char[(line.length() + 1)];
-                strcpy(lineArray, line.c_str());
+//                char * lineArray = new char[(line.length() + 1)];
+//                strcpy(lineArray, line.c_str());
                 
-                write(sockfd, lineArray, strlen(lineArray));
+                n = write(sockfd, &line, sizeof(line));
                 if (n < 0) error("ERROR writing to socket");
+                
+//                n = write(sockfd, "msg", sizeof("msg"));
+                
             }
             
             fileReader.close();

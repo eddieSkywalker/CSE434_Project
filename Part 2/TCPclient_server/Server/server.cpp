@@ -93,9 +93,9 @@ void processSocket(int newsockfd)
         printf("Client Connection Closed.\n");
         exit(0);
     }
-    else{
-        cout << buffer << endl;
-    }
+//    else{
+//        cout << buffer << endl;
+//    }
     
     string filename = strtok(buffer, ","); //split arguments from client (read/write)
     string mode = strtok(NULL, "");
@@ -129,7 +129,7 @@ void processSocket(int newsockfd)
         if(fileReader.is_open() == true) //check that file successfully opened
         {
             //sends line by line to client until finished
-   	 while(getline(fileReader, line) != 0)
+            while(getline(fileReader, line) != 0)
             {
                 char * lineArray = new char[(line.length() + 1)];
                 strcpy(lineArray, line.c_str());
@@ -140,7 +140,6 @@ void processSocket(int newsockfd)
             
             printf("Client requesting read finished. Closing request..\n");
             close(sockfd);
-            userIsFinished = true;
             fileReader.close();
         }
         else //if user is requesting to read a file that does not exist
@@ -150,7 +149,6 @@ void processSocket(int newsockfd)
             
             printf("Client requesting read for file not available. Closing request..\n");
             close(sockfd);
-            userIsFinished = true;
             fileReader.close();
         }
 
@@ -158,32 +156,29 @@ void processSocket(int newsockfd)
     //if client requesting to write(transfer) file to server
     else if(writeRequest == true)
     {
-        cout << "Client requesting write.\n" << endl;
-        
+        printf("Client requesting write.\n");
+        bzero(buffer,256);
+
         //setup parameters for writing to file
         ofstream fileWriter; //Stream class to write on files
-        string line;
-        fileWriter.open(sToPass);
+        fileWriter.open(sToPass); //open this file or create if it doesnt exist
         
-        //Server must WRITE one more time before writing data!
-        write(newsockfd,"Beginning writing.\n", strlen("Beginning writing.\n"));
-        
-        while((n = read(newsockfd,buffer, strlen(buffer))) != 0) //read then write line by line to server stored file
+        while((n = read(newsockfd,buffer,256)) != '\n') //read then write line by line to server stored file
         {
+//            n = read(newsockfd,buffer,256);
+//            if (n < 0) error("ERROR reading from socket");
+            
+            cout << buffer << endl;
             fileWriter << buffer;
+            fileWriter.flush();
+            bzero(buffer,256);
         }
         
         printf("Client done writing to server. Closing request..\n");
         close(sockfd);
-        userIsFinished = true;
         fileWriter.close();
-        
     }
-    else
-    {
-        printf("ELSE!");
-        n = write(newsockfd,"File not founddd.\n", strlen("File not founddd.\n"));
-    }
+
 }
 
 int main(int argc, char *argv[])
