@@ -145,6 +145,10 @@ int main(int argc, char *argv[])
         string filename = strtok(buffer, ",");//filename
         string mode = strtok(NULL,"");
         string command = filename + "," + mode; //concatenate user input to send to server
+        
+        char * commandToPass = new char[(command.length() + 1)];
+        strcpy(commandToPass, command.c_str());
+        
         char * sToPass = new char[(filename.length() + 1)];
         strcpy(sToPass, filename.c_str());
         
@@ -167,7 +171,9 @@ int main(int argc, char *argv[])
         
 // Step 3: Send and Receive data using Read/Write system calls.
         //this write call is sent and received inside the Servers ProcessSocket()
-        n = write(sockfd, &command, sizeof(command)); //send 2 arguments to server to request either r/w of/to a file.
+        bzero(buffer,256);
+        
+        n = write(sockfd, commandToPass, strlen(commandToPass)); //send 2 arguments to server to request either r/w of/to a file.
         if (n < 0) error("ERROR writing to socket");
         
         bzero(buffer,256);
@@ -202,6 +208,7 @@ int main(int argc, char *argv[])
                     if(fileWriter.is_open())
                     {
                         printf("writing to file\n");
+                        cout << buffer << endl;
                         fileWriter << buffer; //writes to local file that is "open"
                     }
                 }

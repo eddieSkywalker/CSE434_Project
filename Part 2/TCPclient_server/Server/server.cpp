@@ -99,6 +99,7 @@ void processSocket(int newsockfd)
     
     string filename = strtok(buffer, ","); //split arguments from client (read/write)
     string mode = strtok(NULL, "");
+    
 	char * sToPass = new char[(filename.length() + 1)];
 	strcpy(sToPass, filename.c_str());
     
@@ -122,6 +123,7 @@ void processSocket(int newsockfd)
         //setup parameters for opening file
         ifstream fileReader (sToPass); //Stream class to read from file
         string line;
+        
 //        fileReader(filename);
         
         if(fileReader.is_open() == true) //check that file successfully opened
@@ -129,7 +131,10 @@ void processSocket(int newsockfd)
             //sends line by line to client until finished
    	 while(getline(fileReader, line) != 0)
             {
-                write(newsockfd, &line, sizeof(line));
+                char * lineArray = new char[(line.length() + 1)];
+                strcpy(lineArray, line.c_str());
+                
+                write(newsockfd, lineArray, strlen(lineArray));
                 if (n < 0) error("ERROR writing to socket");
             }
             
