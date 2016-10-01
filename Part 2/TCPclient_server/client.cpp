@@ -1,14 +1,17 @@
 //
 //  client.c
 //
-//  Created by Eddie Schweitzer & Chris Ward on 9/6/16.
+//  Created by Eddie Schweitzer & Chris Ward on 9/27/16.
+//  Course CSE434, Computer Networks
+//  Semester: Fall 2016
+//  Project Part: 2
+//  Time Spent: 30+ hours
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
-
 #include <iostream> 
 #include <fstream>
 
@@ -46,24 +49,8 @@ int main(int argc, char *argv[])
     
     //serv_addr will contain the address of the server
     struct sockaddr_in serv_addr;
-    
-    //variable server is a pointer to a structure of type hostent
-    /*
-     struct  hostent
-     {
-     char    *h_name;        // official name of host
-     char    **h_aliases;    // alias list
-     int     h_addrtype;     // host address type
-     int     h_length;       // length of address
-     char    **h_addr_list;  // list of addresses from name server
-     #define h_addr  h_addr_list[0]  // address, for backward compatiblity
-     };
-     */
-    
+
     struct hostent *server;
-    
-    //atoi() function can be used to convert port number from a string of digits to an integer, if your input is in the form of a string.
-    //    portno = 8888;
     
     // check to verify port number was entered
     if(argc == 4)
@@ -99,16 +86,14 @@ int main(int argc, char *argv[])
     //contains a code for the address family
     serv_addr.sin_family = AF_INET;
     
-    //copies length bytes from s1 to s2
-    bcopy((char *)server->h_addr,
+    bcopy((char *)server->h_addr,                          //copies length bytes from s1 to s2
           (char *)&serv_addr.sin_addr.s_addr,
           server->h_length);
     
-    //contain the port number
-    serv_addr.sin_port = htons(portno);
+    serv_addr.sin_port = htons(portno);                     //contain the port number
     
-// Step 2: Connect socket to address of server / (Step 4 on Server)
-    //connect function is called by the client to establish a connection to the server. It takes three arguments, the socket file descriptor, the address of the host to which it wants to connect (including the port number), and the size of this address
+    // Step 2: Connect socket to address of server / (Step 4 on Server)
+    //connect function is called by the client to establish a connection to the server.
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
         error("ERROR connecting");
         
@@ -116,7 +101,7 @@ int main(int argc, char *argv[])
         //initialize the buffer using the bzero() function
         bzero(buffer,256);
         
-/* Step 2.5: Attempt to establish connection with client ID */
+        /* Step 2.5: Attempt to establish connection with client ID */
         write(sockfd, &clientNumber, sizeof(int));
         read(sockfd, buffer, 255);
     
@@ -127,7 +112,7 @@ int main(int argc, char *argv[])
         }
     
         printf("%s\n",buffer);
-/* End Step 2.5 */
+        /* End Step 2.5 */
     
     while(1)
     {
@@ -139,103 +124,103 @@ int main(int argc, char *argv[])
         printf("Please enter the request: \n");
         
         bzero(buffer,256);
-        fgets(buffer,255,stdin); //set buffer to console input for a maximum of 255 characters
+        fgets(buffer,255,stdin);                        //user input into buffer
         
-        //parse buffer into 2 arguments
-        string filename = strtok(buffer, ",");//filename
+        string filename = strtok(buffer, ", ");          //parse buffer into 2 arguments
         string mode = strtok(NULL,"");
-        string command = filename + "," + mode; //concatenate user input to send to server
+        string command = filename + ", " + mode;         //concatenate user input to send to server
         
         char * commandToPass = new char[(command.length() + 1)];
         strcpy(commandToPass, command.c_str());
         
-        char * sToPass = new char[(filename.length() + 1)];
-        strcpy(sToPass, filename.c_str());
+        char * convertedFilename = new char[(filename.length() + 1)];
+        strcpy(convertedFilename, filename.c_str());
         
-        string str2 = " r";
-        if(mode.find(str2) != string::npos)
-        {
+        string ifReading = "r";
+        if(mode.find(ifReading) != string::npos) {
             readRequest = true;
         }
         
-        string str3 = " w";
-        if(mode.find(str3) != string::npos)
-        {
+        string ifWriting = "w";
+        if(mode.find(ifWriting) != string::npos) {
             writeRequest = true;
         }
         
-//        if (stringMode == " r")
-//        {
-//            readRequest = true;
-//        }
-        
-// Step 3: Send and Receive data using Read/Write system calls.
-        //this write call is sent and received inside the Servers ProcessSocket()
         bzero(buffer,256);
-        
-        n = write(sockfd, commandToPass, strlen(commandToPass)); //send 2 arguments to server to request either r/w of/to a file.
+
+        // Step 3: Send and Receive data using Read/Write system calls.
+        //this write call is sent and received inside the Servers ProcessSocket()
+        n = write(sockfd, commandToPass, strlen(commandToPass)); //send request of either r/w of/to a file.
         if (n < 0) error("ERROR writing to socket");
         
-        if(readRequest == true) //if user wants to read from server
+        if(readRequest == true)
         {
-            ofstream fileWriter; //Stream class to write on files
+            cout << "made it " << endl;
             
-            printf("Client is now waiting for Response:\n");
+            ofstream fileWriter;                                //Stream class to write on files
+            printf("Client is requesting reading:\n");
+//            fileWriter.open(convertedFilename);
+            printf("HELLO");
             
-            while(finished == false)//read response from server
+            while(finished == false)
             {
-                n = read(sockfd,buffer,255);
+                bzero(buffer,256);
+                cout << "made it " << endl;
+                
+                n = read(sockfd,buffer,sizeof(buffer));
                 if (n < 0) error("ERROR reading from socket");
-                if (n == 0) finished = true; //if server has finished sending file contents, it sends 0
-                
-//                ofstream fw ("readthis.txt");
-//                fw << "it does work.\n"; //writes to local file that is "open"
-                
-                if(strncmp(buffer, "File not found.\n", 17) == 0)
+                if (n == 0)
+                    finished = true;
+                else if(strncmp(buffer, "end", 3) == 0)
+                {
+                    printf("%s\n", buffer);
+                    finished = true;
+                }
+                else if(strncmp(buffer, "File not found.\n", 17) == 0)
                 {
                     cout << buffer << endl;
                     finished = true;
                 }
-                else //server found file and has begun sending content
+                else                                            //server found file & is sending content
                 {
                     if(initMakeFile == false)
                     {
-                        fileWriter.open(sToPass); //open a file 'filename' for processing
+                        cout << "made it 1" << endl;
+//                        fileWriter.open(convertedFilename);     //open a file 'filename' for processing
                         initMakeFile = true;
                     }
-                    if(fileWriter.is_open())
-                    {
-                        printf("writing to file\n");
-                        cout << buffer << endl;
-                        fileWriter << buffer; //writes to local file that is "open"
-                    }
+                    fileWriter << buffer << endl;               //writes to local file that is "open"
+                    fileWriter.flush();
                 }
             }
-            
-            fileWriter.close(); //close local file
+            bzero(buffer,256);
+            fileWriter.close();
+            readRequest = false;
         }
-        else if(writeRequest == true) //if user wants to write(transfer) to server
+        else if(writeRequest == true)                           //if user wants to write(transfer) to server
         {
-            //setup parameters for writing to file
-            ifstream fileReader; //Stream class to read from files
+            printf("Beginning writing.\n");
+            ifstream fileReader;                                //Stream class to read from files
             string line;
-            fileReader.open(sToPass);
+            fileReader.open(convertedFilename);
             
-            
-            while(getline(fileReader, line) == true) //write line by line to server
+            while(getline(fileReader, line) == true)            //write line by line to server
             {
 //                char * lineArray = new char[(line.length() + 1)];
 //                strcpy(lineArray, line.c_str());
-                
                 n = write(sockfd, &line, sizeof(line));
                 if (n < 0) error("ERROR writing to socket");
-                
-//                n = write(sockfd, "msg", sizeof("msg"));
-                
             }
             
             fileReader.close();
+            
+            printf("Writing finished.\n");
+            writeRequest = false;
         }
+        
+        //send an end of file message to client
+//        n = write(sockfd, "end", strlen("end"));
+//        if (n < 0) error("ERROR writing to socket");
         
         bzero(buffer,256);
         printf("Press enter to continue or N to exit.\n");

@@ -1,36 +1,11 @@
 //
 //  server.c
 //
-//  Created by Eddie Schweitzer & Chris Ward on 9/6/16.
+//  Created by Eddie Schweitzer & Chris Ward on 9/27/16.
 //  Course CSE434, Computer Networks
 //  Semester: Fall 2016
-//  Project Part: 1
-//  Time Spent: 30+ hours
-/*
- 
-1) The advantage to a concurrent, connection oriented system is that the server can handle multiple 
-connections at once, whereas an iterative server would have to only have one connection at a time. 
-This is obviously an advantage because in real life, it is very likely that many people
-will want to connect to the same server at the same time.
- 
-The disadvantage is the zombie problem, where once someone has connected and disconnected 
-they leave behind a ghost in the process kernel that contains information about the process that had occured.
-This is what a zombie is, when a process has been terminated but is not allowed to completely
-die because at some point the server might want information related to the death of that process.
-Over time, with many connections, these zombies can slow down the system during operations by the server,
-as they clog up the process table in the kernel. This is also true over any architecture, so the problem
-is persistent. 
-
-2) In general, whenever a server will be needed by many users at the same time, you do not want to use an iterative server
-so a concurrent server is a good idea. Furthermore, the appropriate time to use a concurrent, connection oriented server 
-process is when the server will be doing a lot of reading and writing over a long period of time, and when you need a 
-connection to be reliable. For example, FTP and Telnet often send and receive data to and from servers over much time,
-so in these casesa a concurrent, connection oriented server used. However, the concurrent, connection oriented model
-has a very high overhead because of the nature of how forking works, creating many different connections inside of a server,
-so this process should not when the average processing time of requests is small compared to the overhead caused by the threads. 
-*/
-
-//header files
+//  Project Part: 2
+//  Time Spent: 40+ hours
 
 //input - output declarations included in all C programs
 #include <stdio.h>
@@ -38,22 +13,13 @@ so this process should not when the average processing time of requests is small
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
-
 #include <fstream>
 #include <iostream>
-
-//contains definitions of a number of data types used in system calls
-#include <sys/types.h>
-
-//definitions of structures needed for sockets
-#include <sys/socket.h>
-
-//in.h contains constants and structures needed for internet domain addresses
-#include <netinet/in.h>
+#include <sys/types.h>//contains definitions of a number of data types used in system calls
+#include <sys/socket.h>//definitions of structures needed for sockets
+#include <netinet/in.h>//in.h contains constants and structures needed for internet domain addresses
 
 using namespace std;
-
-//variable declarations
 
 //sockfd and newsockfd are file descriptors. These two variables store the values returned by the socket system call and the accept system call.
 //portno stores the port number on which the server accepts connections.
@@ -64,13 +30,11 @@ bool initUserCheck = false;
 int n;
 int totalClients = 0;
 bool readRequest = false;
-bool userIsFinished = false;
 bool writeRequest = false;
+bool finished == false;
 
-//server reads characters from the socket connection into this buffer.
-char buffer[256];
+char buffer[256];//server reads characters from the socket connection into this buffer.
 
-//This function is called when a system call fails. It displays a message about the error on stderr and then aborts the program.
 void error(const char *msg)
 {
     perror(msg);
@@ -79,9 +43,8 @@ void error(const char *msg)
 
 void processSocket(int newsockfd)
 {
-    //After a client has successfully connected init buffer using bzero()
-    bzero(buffer,256);
-
+    bzero(buffer,256); //After a client has successfully connected init buffer using bzero()
+    
     //read call uses new file descriptor, the one returned by accept()
     /*this call reads r/w the command from user */
     n = read(newsockfd,buffer,255);
@@ -91,56 +54,50 @@ void processSocket(int newsockfd)
     {
         totalClients--;
         printf("Client Connection Closed.\n");
+        close(newsockfd);
         exit(0);
     }
-//    else{
-//        cout << buffer << endl;
-//    }
     
-    string filename = strtok(buffer, ","); //split arguments from client (read/write)
+    //split arguments from client for processing
+    string filename = strtok(buffer, ", ");
     string mode = strtok(NULL, "");
+	char * convertedFilename = new char[(filename.length() + 1)];
+	strcpy(convertedFilename, filename.c_str());
     
-	char * sToPass = new char[(filename.length() + 1)];
-	strcpy(sToPass, filename.c_str());
-    
-    string str2 = " r";
-    if(mode.find(str2) != string::npos)
-    {
+    string ifReading = "r";
+    if(mode.find(ifReading) != string::npos) {
         readRequest = true;
     }
-    
-    string str3 = " w";
-    if(mode.find(str3) != string::npos)
-    {
+    string ifWriting = "w";
+    if(mode.find(ifWriting) != string::npos) {
         writeRequest = true;
     }
     
-    //requesting to read a file
+    bzero(buffer,256);
+    
+    /* Begin handling request. */
     if(readRequest == true)
     {
-        printf("Client requesting read.\n");
-        
-        //setup parameters for opening file
-        ifstream fileReader (sToPass); //Stream class to read from file
+        printf("Client request reading.\n");
+        ifstream fileReader (convertedFilename); //Stream class to read from file
         string line;
-        
-//        fileReader(filename);
-        
-        if(fileReader.is_open() == true) //check that file successfully opened
+
+        if(fileReader.is_open()) //check that file successfully opened
         {
-            //sends line by line to client until finished
-            while(getline(fileReader, line) != 0)
+            while(getline(fileReader, line))
             {
-                char * lineArray = new char[(line.length() + 1)];
-                strcpy(lineArray, line.c_str());
-                
-                write(newsockfd, lineArray, strlen(lineArray));
+                n = write(newsockfd, &line, sizeof(line));
                 if (n < 0) error("ERROR writing to socket");
             }
             
-            printf("Client requesting read finished. Closing request..\n");
-            close(sockfd);
             fileReader.close();
+            
+            //send an end of file message to client
+            n = write(newsockfd, "end", strlen("end"));
+            if (n < 0) error("ERROR writing to socket");
+            
+            printf("Client requesting read finished. Closing request..\n");
+//            close(sockfd);
         }
         else //if user is requesting to read a file that does not exist
         {
@@ -148,37 +105,41 @@ void processSocket(int newsockfd)
             if (n < 0) error("ERROR writing to socket");
             
             printf("Client requesting read for file not available. Closing request..\n");
-            close(sockfd);
             fileReader.close();
         }
-
+        
+        readRequest = false;
     }
-    //if client requesting to write(transfer) file to server
     else if(writeRequest == true)
     {
         printf("Client requesting write.\n");
-        bzero(buffer,256);
-
-        //setup parameters for writing to file
-        ofstream fileWriter; //Stream class to write on files
-        fileWriter.open(sToPass); //open this file or create if it doesnt exist
+        ofstream fileWriter;                            //Stream class to write on files
+        fileWriter.open(convertedFilename);             //open this file or create if it doesnt exist
         
-        while((n = read(newsockfd,buffer,256)) != '\n') //read then write line by line to server stored file
+        while(finished == false)                        //read then write line by line to server stored file
         {
-//            n = read(newsockfd,buffer,256);
-//            if (n < 0) error("ERROR reading from socket");
-            
+            n = read(newsockfd,buffer,sizeof(buffer));
+            if (n < 0) error("ERROR reading from socket");
             cout << buffer << endl;
-            fileWriter << buffer;
-            fileWriter.flush();
-            bzero(buffer,256);
+            if(strncmp(buffer, "end", 3) == 0)
+            {
+                printf("%s\n", buffer);
+                finished = true;
+            }
+            else
+            {
+                cout << buffer << endl;
+                fileWriter << buffer << endl;
+                fileWriter.flush();
+//                bzero(buffer,256);
+            }
         }
         
+        finished = false;
         printf("Client done writing to server. Closing request..\n");
-        close(sockfd);
         fileWriter.close();
+        writeRequest = false;
     }
-
 }
 
 int main(int argc, char *argv[])
@@ -186,23 +147,10 @@ int main(int argc, char *argv[])
     //clilen stores the size of the address of the client. This is required for the accept system call.
     socklen_t clilen;
     
-    //sockaddr_in is a structure containing an internet address
-    /*
-     struct sockaddr_in
-     {
-     short   sin_family; //must be AF_INET
-     u_short sin_port;
-     struct  in_addr sin_addr;
-     char    sin_zero[8]; // Not used, must be zero
-     };
-     */
-    //in_addr structure, contains only one field, a unsigned long called s_addr.
-    
     //serv_addr will contain the address of the server, and cli_addr will contain the address of the client which connects to the server.
     struct sockaddr_in serv_addr, cli_addr;
     
-//Step 1: create socket
-    //it take three arguments - address domain, type of socket, protocol (zero allows the OS to choose thye appropriate protocols based on type of socket)
+    //Step 1: create socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
         error("ERROR opening socket");
@@ -211,34 +159,23 @@ int main(int argc, char *argv[])
     //two arguments - pointer to buffer and sizeof buffer
     bzero((char *) &serv_addr, sizeof(serv_addr));
     
-    //atoi() function can be used to convert port number from a string of digits to an integer, if your input is in the form of a string.
     // verify port #
     if(argc == 2)
     {
-        // convert to int
         portno = atoi(argv[1]);
     }
     else
         error("ERROR starting server");
     
-    //contains a code for the address family
-    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_family = AF_INET;             //contains a code for the address family
+    serv_addr.sin_addr.s_addr = INADDR_ANY;     //contains the IP address of the host
+    serv_addr.sin_port = htons(portno);         //contain the port number
     
-    //contains the IP address of the host
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    
-    //contain the port number
-    serv_addr.sin_port = htons(portno);
-    
-// Step 2: Bind socket
-    //bind() system call binds a socket to an address, in this case the address of the current host and port number on which the server will run.
-    //three arguments, the socket file descriptor, the address to which is bound, and the size of the address to which it is bound.
+    // Step 2: Bind socket
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
         error("ERROR on binding");
     
-// Step 3: Listen for connections
-    //listen system call allows the process to listen on the socket for connections.
-    //The first argument is the socket file descriptor, and second is number of connections that can be waiting while the process is handling a particular connection.
+    // Step 3: Listen for connections
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
     
@@ -255,10 +192,9 @@ int main(int argc, char *argv[])
         
         n = read(newsockfd,&submittedClientID,sizeof(int));
         if (n < 0) error("ERROR reading from socket");
-        int i;
         
-        // cycle array to search for duplicate
-        for(i = 0; i < 10; i++)
+        int i;
+        for(i = 0; i < 10; i++) // cycle array to search for duplicate
         {
             if(clientNumberArray[i] == submittedClientID)
             {
@@ -277,7 +213,7 @@ int main(int argc, char *argv[])
             //add user to stored client array
             totalClients++;
             clientNumberArray[i] = submittedClientID;
-            printf("Client: %d %d Connected.\n", submittedClientID, totalClients);
+            printf("\nClient: %d Connected. Total Clients: %d\n\n", submittedClientID, totalClients);
             
             n = write(newsockfd,"Connection established.\n", strlen("Connection established.\n"));
             if (n < 0) error("ERROR writing to socket in dupe user True");
@@ -305,8 +241,7 @@ int main(int argc, char *argv[])
             cout << (totalClients);
             if (n < 0) error("ERROR writing to socket Dupe user False");
             close(newsockfd);
-        }
-        /* End Check */
+        }        /* End Check */
         
     } /* end while loop */
     

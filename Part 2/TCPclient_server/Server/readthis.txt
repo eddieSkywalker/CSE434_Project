@@ -1,1 +1,2 @@
-lineofGold
+messageToRead
+secondLineRead
