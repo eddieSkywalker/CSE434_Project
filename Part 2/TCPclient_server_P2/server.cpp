@@ -5,7 +5,7 @@
 //  Course CSE434, Computer Networks
 //  Semester: Fall 2016
 //  Project Part: 2
-//  Time Spent: 40+ hours
+//  Time Spent: 50+ hours
 
 //input - output declarations included in all C programs
 #include <stdio.h>
@@ -18,6 +18,9 @@
 #include <sys/types.h>//contains definitions of a number of data types used in system calls
 #include <sys/socket.h>//definitions of structures needed for sockets
 #include <netinet/in.h>//in.h contains constants and structures needed for internet domain addresses
+#include <stack>
+#include <sys/mman.h>
+#include <array>
 
 using namespace std;
 
@@ -31,7 +34,16 @@ int n;
 int totalClients = 0;
 bool readRequest = false;
 bool writeRequest = false;
-bool finished == false;
+bool finished = false;
+std::stack<string> toFile;
+
+typedef struct myStruct{
+    char* name;
+    myStruct *next;
+    myStruct *prev;
+} myStruct;
+
+myStruct* lockedFiles;
 
 char buffer[256];//server reads characters from the socket connection into this buffer.
 
@@ -40,6 +52,33 @@ void error(const char *msg)
     perror(msg);
     exit(1);
 }
+
+void addLock(myStruct* node, char* fileName){
+    myStruct *current;
+    current = node;
+    myStruct *previous = (myStruct*) malloc(sizeof(myStruct));
+    while(current != NULL){
+        previous = current;
+        current = current->next;
+    }
+    current->name = fileName;
+    current->next = NULL;
+    current->prev = previous;
+}
+
+void removeLock(myStruct* node, char* fileName){
+    myStruct *current;
+    current = node;
+    myStruct *previous = (myStruct*) malloc(sizeof(myStruct));
+    while(current->name != fileName){
+        previous = current;
+        current = current->next;
+    }
+    previous->next = current->next;
+    current = NULL;
+}
+
+
 
 void processSocket(int newsockfd)
 {
@@ -81,26 +120,28 @@ void processSocket(int newsockfd)
         printf("Client request reading.\n");
         ifstream fileReader (convertedFilename); //Stream class to read from file
         string line;
-
+//        addLock(lockedFiles, convertedFilename);
+        
         if(fileReader.is_open()) //check that file successfully opened
         {
             while(getline(fileReader, line))
             {
+                usleep(1*100);
+//                sleep(1);
                 n = write(newsockfd, &line, sizeof(line));
                 if (n < 0) error("ERROR writing to socket");
             }
-            
             fileReader.close();
-            
-            //send an end of file message to client
-            n = write(newsockfd, "end", strlen("end"));
+            n = write(newsockfd, "end", strlen("end")); //send an end of file message to client
             if (n < 0) error("ERROR writing to socket");
             
             printf("Client requesting read finished. Closing request..\n");
-//            close(sockfd);
+            close(sockfd);
         }
         else //if user is requesting to read a file that does not exist
         {
+            usleep(1*100);
+//            sleep(1);
             n = write(newsockfd,"File not found.\n", strlen("File not found.\n"));
             if (n < 0) error("ERROR writing to socket");
             
@@ -109,6 +150,7 @@ void processSocket(int newsockfd)
         }
         
         readRequest = false;
+//        removeLock(lockedFiles, convertedFilename);
     }
     else if(writeRequest == true)
     {
@@ -116,38 +158,81 @@ void processSocket(int newsockfd)
         ofstream fileWriter;                            //Stream class to write on files
         fileWriter.open(convertedFilename);             //open this file or create if it doesnt exist
         
-        while(finished == false)                        //read then write line by line to server stored file
+//        addLock(lockedFiles, convertedFilename);
+        while(finished == false)
         {
-            n = read(newsockfd,buffer,sizeof(buffer));
+            bzero(buffer,256);
+            
+            n = read(newsockfd, buffer, sizeof(buffer));
+            
             if (n < 0) error("ERROR reading from socket");
-            cout << buffer << endl;
-            if(strncmp(buffer, "end", 3) == 0)
+            
+            else if(strncmp(buffer, "end", 3) == 0)
             {
-                printf("%s\n", buffer);
+                printf("Writing finished.\n");
                 finished = true;
             }
             else
             {
+                string temp = buffer;
+                toFile.push(temp);
                 cout << buffer << endl;
-                fileWriter << buffer << endl;
-                fileWriter.flush();
-//                bzero(buffer,256);
+//                fileWriter << buffer << endl;
+//                fileWriter.flush();
             }
         }
         
+        //utilize C stack to store file and then read it out. FILO.
+        while(toFile.empty() == false) {
+            string temp;
+            temp = toFile.top();
+            fileWriter << temp << endl;
+            fileWriter.flush();
+            toFile.pop();
+        }
+        
+//        while(finished == false)                        //read then write line by line to server stored file
+//        {
+//            bzero(buffer,256);
+//            
+//            n = read(newsockfd,buffer,sizeof(buffer));
+//            if (n < 0) error("ERROR reading from socket");
+//            if (n == 0)
+//                finished = true;
+//            
+//            if(strncmp(buffer, "end", 3) == 0)
+//            {
+//                printf("%s\n", buffer);
+//                printf("ELSE IF END\n");
+//                finished = true;
+//            }
+//            else
+//            {
+//                cout << buffer << endl;
+//                fileWriter << buffer << endl;
+//                fileWriter.flush();
+//                bzero(buffer,256);
+//            }
+//        }
+        
+        bzero(buffer,256);
         finished = false;
         printf("Client done writing to server. Closing request..\n");
+//        removeLock(lockedFiles, convertedFilename);
         fileWriter.close();
         writeRequest = false;
+        finished = false;
     }
 }
 
 int main(int argc, char *argv[])
 {
+//    lockedFiles = (myStruct*) mmap(NULL, sizeof(char), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANON, -1, 0);
+
+    
     //clilen stores the size of the address of the client. This is required for the accept system call.
     socklen_t clilen;
-    
-    //serv_addr will contain the address of the server, and cli_addr will contain the address of the client which connects to the server.
+
     struct sockaddr_in serv_addr, cli_addr;
     
     //Step 1: create socket
@@ -159,8 +244,7 @@ int main(int argc, char *argv[])
     //two arguments - pointer to buffer and sizeof buffer
     bzero((char *) &serv_addr, sizeof(serv_addr));
     
-    // verify port #
-    if(argc == 2)
+    if(argc == 2) // verify port #
     {
         portno = atoi(argv[1]);
     }
@@ -202,7 +286,7 @@ int main(int argc, char *argv[])
             }
         }
             
-        if(duplicateUser == false && totalClients <= 5)
+        if(duplicateUser == false && totalClients < 5)
         {
             int i = 0;
             while(clientNumberArray[i] != -1 && i < 5)
@@ -218,7 +302,7 @@ int main(int argc, char *argv[])
             n = write(newsockfd,"Connection established.\n", strlen("Connection established.\n"));
             if (n < 0) error("ERROR writing to socket in dupe user True");
             
-            // create child process
+            //create child process
             pid = fork();
             
             if (pid < 0)
@@ -234,6 +318,13 @@ int main(int argc, char *argv[])
             else
                 close(newsockfd);
         }
+        else if (duplicateUser == false && totalClients >= 5)
+        {
+            n = write(newsockfd,"Max Clients Connected.\n", strlen("Max Clients Connected.\n"));
+            printf("Client attempting connection, max clients connected.");
+            if (n < 0) error("ERROR writing to socket in dupe user True");
+            close(newsockfd);
+        }
         else if (duplicateUser == true)
         {
             // client already registered, deny request to server.
@@ -241,8 +332,7 @@ int main(int argc, char *argv[])
             cout << (totalClients);
             if (n < 0) error("ERROR writing to socket Dupe user False");
             close(newsockfd);
-        }        /* End Check */
-        
+        }   /* End Check */
     } /* end while loop */
     
     //close connections using file descriptors
@@ -251,3 +341,4 @@ int main(int argc, char *argv[])
     
     return 0;
 }
+
